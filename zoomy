@@ -1,0 +1,58 @@
+#!/bin/bash - 
+#===============================================================================
+#
+#          FILE: zoomy
+# 
+#         USAGE: ./zoomy 
+# 
+#   DESCRIPTION: 
+# 
+#       OPTIONS: ---
+#  REQUIREMENTS: ---
+#          BUGS: ---
+#         NOTES: ---
+#        AUTHOR: black-fake (), 
+#  ORGANIZATION: 
+#       CREATED: 01.10.2021 18:18:54
+#      REVISION:  ---
+#===============================================================================
+
+filename=testfile.txt
+
+function access_meeting(){
+	url="$1"
+	xdg-open $url
+	exit
+}
+
+function add_recurring_meeting(){
+	# some code here
+	# until now do nothing
+	sleep 0.000000000000001
+}
+
+function remove_meeting_url(){
+	to_remove=$(awk '{print toupper($0)}' <<< $1)
+	rg "$to_remove" >/dev/null <<< $(echo $filename | awk 'print $1') && is_present=true || is_present=false
+
+	if [[ "$is_present" == 'true' ]]
+	then
+		while read line
+		do
+			reduced_entries+=("$line")
+		done< <(awk "!(/$to_remove/)" $filename)
+
+		printf '' > $filename
+		
+		amount=${#reduced_entries[@]}
+		up_counter=0
+		until (( "$up_counter" == "$amount" ))
+		do
+			echo ${reduced_entries[$up_counter]} >> $filename
+			up_counter=$((up_counter+1))
+		done
+	elif [[ "$is_present" == "false" ]]
+	then
+		echo "$to_remove has not been found"
+	fi
+}
