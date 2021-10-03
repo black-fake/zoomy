@@ -56,3 +56,15 @@ function remove_meeting_url(){
 		echo "$to_remove has not been found"
 	fi
 }
+
+function parse_zoom_link(){
+	url="$1"
+
+	confno=$(grep -o -E '[0-9]{5,}' <<< "$url")
+	passwd=$(grep -o -E 'pwd=[a-zA-Z0-9]+' <<< "$url" | sed 's~pwd=~~')
+	server=$(grep -o -E '://.+/' <<< "$url" | sed 's~j/~~;s~/$~~')
+
+	new_url="zoommtg$server/join?action=join&confno=$confno"
+
+	[ "$passwd" != "" ] && new_url="$new_url&pwd=$passwd"
+}
