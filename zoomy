@@ -17,7 +17,29 @@
 #      REVISION:  ---
 #===============================================================================
 
+config_path="$HOME/.zoomy"
+meetings_file='meetings.txt'
 filename=testfile.txt
+
+function print_help(){
+cat<<EOF
+zoomy is a tool to manage and access (recurring and single) zoom meetings
+
+USAGE:		zoomy [options] [<name>]
+
+OPTIONS:
+		-a <url>, --add <url>		add a meeting to the list and give it a name
+
+		-r <name>, --remove <name>	remove a meeting by its name
+
+		-l, --list			list saved meetings on the list
+EOF
+}
+
+function error_message(){
+	msg="$1"
+	printf "ERROR:\n\t%s\n\tsee 'zoomy --help' for more info" $msg >&2
+}
 
 function access_meeting(){
 	url="$1"
@@ -27,8 +49,18 @@ function access_meeting(){
 
 function add_recurring_meeting(){
 	# some code here
-	# until now do nothing
-	sleep 0.000000000000001
+	parse_zoom_link "$1"
+	meeting_url="$zoom_url"
+	read -p 'Name: ' meeting_name
+	
+	[ ! -f "$config_path/$meetings_file" ] && touch "$config_path/$meetings_file"
+
+	if [[ $(cat "$config_path/$meetings_file" | awk '$1=='$meeting_name' {print}') != "" ]]
+	then
+		echo "$(awk '{print toupper($0)}' <<< $meeting_name) $meeting_url" >> "$config_path/$meetings_file"
+	else
+		echo "$meeting_name already exists" >&2
+	fi
 }
 
 function remove_meeting_url(){
@@ -67,4 +99,52 @@ function parse_zoom_link(){
 	new_url="zoommtg$server/join?action=join&confno=$confno"
 
 	[ "$passwd" != "" ] && new_url="$new_url&pwd=$passwd"
+	zoom_url="$new_url"
 }
+
+
+[ -d "$config_path" ] || mkdir "$config_path"
+
+###################################
+## parse and check all arguments ##
+###################################
+
+#parsing all arguments
+
+loop_rounds=$(bc<<<"scale=0;$#/2+1")
+while (( "$loop_rounds" > 0 ))
+do
+	# actions: add, remove, list, start meeting
+	if [[ "$1" == '-a' || "$1" == '--add' ]]
+	then
+		# add_meeting
+		if [[ "$2" != "" ]]
+		then
+			add_recurring_meeting "$2"
+		else
+			error_message "missing url"
+		fi
+		exit
+	elif [[ "$1" == '-r' || "$1" == '--remove' ]]
+	then
+		sleep 0.000000000000001
+		# remove_meeting
+	elif [[ "$1" == '-l' || "$1" == '--list' ]]
+	then
+		sleep 0.000000000000001
+		# list_meetings
+	elif [[ $(rg '^https' <<< "$1") ]]
+	then
+		echo 'starting meeting'
+		parse_zoom_link "$1"
+		access_meeting "$zoom_url"
+		exit
+	elif [[ "$1" == '-h' || "$1" == '--help' ]]
+	then
+		print_help
+		exit
+	fi
+	shift 2
+
+	loop_rounds=$((loop_rounds-1))
+done
