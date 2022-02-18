@@ -42,7 +42,13 @@ function error_message(){
 	printf "ERROR:\n\t%s\n\tsee 'zoomy --help' for more info\n" $msg >&2
 }
 
+function start_mic_leveling(){
+	# hold mic on level   --> this is due to auto_mic_adjust-function of zoom
+	gnome-terminal -- hold_mic_on_level
+}
+
 function access_meeting(){
+	start_mic_leveling
 	url="$1"
 	xdg-open $url
 	exit
