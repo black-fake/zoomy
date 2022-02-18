@@ -54,8 +54,9 @@ function add_recurring_meeting(){
 	read -p 'Name: ' meeting_name
 	
 	[ ! -f "$config_path/$meetings_file" ] && touch "$config_path/$meetings_file"
-
-	if [[ $(cat "$config_path/$meetings_file" | awk '$1=='$meeting_name' {print}') != "" ]]
+	
+	grep -i $meeting_name "$config_path/$meetings_file" >/dev/null 2>/dev/null
+	if [[ "$?" != 0 ]]
 	then
 		echo "$(awk '{print toupper($0)}' <<< $meeting_name) $meeting_url" >> "$config_path/$meetings_file"
 	else
