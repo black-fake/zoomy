@@ -19,7 +19,7 @@
 
 config_path="$HOME/.zoomy"
 meetings_file='meetings.txt'
-filename=testfile.txt
+items_per_row=4
 
 function print_help(){
 cat<<EOF
@@ -99,6 +99,30 @@ function remove_meeting_url(){
 	fi
 }
 
+function list_saved_meetings(){
+	
+while read line
+do
+	printf "\t$line\n"
+done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
+
+# more entries per line
+# TODO: make it look nice
+
+	#line_count=0
+	#while read line
+	#do
+	#	if [[ $(bc <<< "$line_count%$items_per_row") != 0 || "$line_count" == 0 ]]
+	#	then
+	#		printf "\t$line"
+	#	else
+	#		printf "\n\t$line"
+	#	fi
+	#	line_count=$((line_count+1))
+	#done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
+	#printf "\n"
+} 
+
 function parse_zoom_link(){
 	url="$1"
 
@@ -120,47 +144,41 @@ function parse_zoom_link(){
 ###################################
 
 #parsing all arguments
+# actions: add, remove, list, start meeting
 
-loop_rounds=$(bc<<<"scale=0;$#/2+1")
-while (( "$loop_rounds" > 0 ))
-do
-	# actions: add, remove, list, start meeting
-	if [[ "$1" == '-a' || "$1" == '--add' ]]
+if [[ "$1" == '-a' || "$1" == '--add' ]]
+then
+	# add_meeting
+	if [[ "$2" != "" ]]
 	then
-		# add_meeting
-		if [[ "$2" != "" ]]
-		then
-			add_recurring_meeting "$2"
-		else
-			error_message 'missing-url'
-		fi
-		exit
-	elif [[ "$1" == '-r' || "$1" == '--remove' ]]
-	then
-		# remove_meeting
-		if [[ "$2" != "" ]]
-		then
-			remove_meeting_url $2
-		else
-			error_message 'missing-meeting-name'
-		fi
-		exit
-	elif [[ "$1" == '-l' || "$1" == '--list' ]]
-	then
-		sleep 0.000000000000001
-		# list_meetings
-	elif [[ $(rg '^https' <<< "$1") ]]
-	then
-		echo 'starting meeting'
-		parse_zoom_link "$1"
-		access_meeting "$zoom_url"
-		exit
-	elif [[ "$1" == '-h' || "$1" == '--help' ]]
-	then
-		print_help
-		exit
+		add_recurring_meeting "$2"
+	else
+		error_message 'missing-url'
 	fi
-	shift 2
-
-	loop_rounds=$((loop_rounds-1))
-done
+	exit
+elif [[ "$1" == '-r' || "$1" == '--remove' ]]
+then
+	# remove_meeting
+	if [[ "$2" != "" ]]
+	then
+		remove_meeting_url $2
+	else
+		error_message 'missing-meeting-name'
+	fi
+	exit
+elif [[ "$1" == '-l' || "$1" == '--list' ]]
+then
+	# list_meetings
+	list_saved_meetings
+	exit
+elif [[ $(rg '^https' <<< "$1") ]]
+then
+	echo 'starting meeting'
+	parse_zoom_link "$1"
+	access_meeting "$zoom_url"
+	exit
+elif [[ "$1" == '-h' || "$1" == '--help' ]]
+then
+	print_help
+	exit
+fi
