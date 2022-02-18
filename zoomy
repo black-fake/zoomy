@@ -37,8 +37,9 @@ EOF
 }
 
 function error_message(){
+#FIXME: error messages with space are calling error_message() multiple times
 	msg="$1"
-	printf "ERROR:\n\t%s\n\tsee 'zoomy --help' for more info" $msg >&2
+	printf "ERROR:\n\t%s\n\tsee 'zoomy --help' for more info\n" $msg >&2
 }
 
 function access_meeting(){
@@ -66,24 +67,32 @@ function add_recurring_meeting(){
 
 function remove_meeting_url(){
 	to_remove=$(awk '{print toupper($0)}' <<< $1)
-	rg "$to_remove" >/dev/null <<< $(echo $filename | awk 'print $1') && is_present=true || is_present=false
+	grep "$to_remove" $config_path/$meetings_file >/dev/null && is_present=true || is_present=false
 
 	if [[ "$is_present" == 'true' ]]
 	then
-		while read line
-		do
-			reduced_entries+=("$line")
-		done< <(awk "!(/$to_remove/)" $filename)
+		echo "Do you really want to delete the Meeting ${to_remove}? [Y/n]"
+		read confirmation
+		if [[ "$confirmation" ==  'Y' || "$confirmation" == 'y' || "$confirmation" == '' ]]
+		then
+			while read line
+			do
+				reduced_entries+=("$line")
+			done< <(awk "!(/$to_remove/)" $config_path/$meetings_file)
 
-		printf '' > $filename
-		
-		amount=${#reduced_entries[@]}
-		up_counter=0
-		until (( "$up_counter" == "$amount" ))
-		do
-			echo ${reduced_entries[$up_counter]} >> $filename
-			up_counter=$((up_counter+1))
-		done
+			printf '' > $config_path/$meetings_file
+			
+			amount=${#reduced_entries[@]}
+			up_counter=0
+			until (( "$up_counter" == "$amount" ))
+			do
+				echo ${reduced_entries[$up_counter]} >> $config_path/$meetings_file
+				up_counter=$((up_counter+1))
+			done
+		else
+			echo 'cancelling ...'
+			exit
+		fi
 	elif [[ "$is_present" == "false" ]]
 	then
 		echo "$to_remove has not been found"
@@ -123,13 +132,19 @@ do
 		then
 			add_recurring_meeting "$2"
 		else
-			error_message "missing url"
+			error_message 'missing-url'
 		fi
 		exit
 	elif [[ "$1" == '-r' || "$1" == '--remove' ]]
 	then
-		sleep 0.000000000000001
 		# remove_meeting
+		if [[ "$2" != "" ]]
+		then
+			remove_meeting_url $2
+		else
+			error_message 'missing-meeting-name'
+		fi
+		exit
 	elif [[ "$1" == '-l' || "$1" == '--list' ]]
 	then
 		sleep 0.000000000000001
