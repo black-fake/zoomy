@@ -66,6 +66,8 @@ function add_recurring_meeting(){
 }
 
 function remove_meeting_url(){
+#TODO: meetings with names beginning with similar symbols must be distinguished
+#TODO: search for to_be_deleted only in first column
 	to_remove=$(awk '{print toupper($0)}' <<< $1)
 	grep "$to_remove" $config_path/$meetings_file >/dev/null && is_present=true || is_present=false
 
@@ -101,10 +103,10 @@ function remove_meeting_url(){
 
 function list_saved_meetings(){
 	
-while read line
-do
-	printf "\t$line\n"
-done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
+	while read line
+	do
+		printf "\t$line\n"
+	done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
 
 # more entries per line
 # TODO: make it look nice
@@ -122,6 +124,19 @@ done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
 	#done< <(cat "$config_path/$meetings_file" | awk '{print $1}')
 	#printf "\n"
 } 
+
+function access_saved_meeting(){
+	meeting=$(awk '{print toupper($0)}' <<< "$1")
+	
+	meeting_line_number=$(awk '{print $1}' $config_path/$meetings_file | awk "/$meeting/ {print NR}")
+	meeting_url=$(awk '{print $2}' $config_path/$meetings_file | awk "NR==$meeting_line_number" 2>/dev/null)
+	if [[ "$meeting_url" == '' ]]
+	then
+		echo $(awk '{print toupper($0)}' <<< $meeting) not found!
+	else
+		access_meeting "$meeting_url"
+	fi
+}
 
 function parse_zoom_link(){
 	url="$1"
@@ -171,14 +186,19 @@ then
 	# list_meetings
 	list_saved_meetings
 	exit
-elif [[ $(rg '^https' <<< "$1") ]]
-then
-	echo 'starting meeting'
-	parse_zoom_link "$1"
-	access_meeting "$zoom_url"
-	exit
 elif [[ "$1" == '-h' || "$1" == '--help' ]]
 then
 	print_help
 	exit
+else
+	# start meeting
+	if [[ $(rg '^http' <<< "$1") ]]
+	then
+		echo 'starting meeting'
+		parse_zoom_link "$1"
+		access_meeting "$zoom_url"
+		exit
+	else
+		access_saved_meeting "$1"
+	fi
 fi
